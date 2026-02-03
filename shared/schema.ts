@@ -60,6 +60,25 @@ export const userNotifications = pgTable("user_notifications", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+export const companies = pgTable("companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  description: text("description"),
+  logoUrl: text("logo_url"),
+  websiteUrl: text("website_url"),
+  isSpecialPartner: boolean("is_special_partner").notNull().default(false),
+  qrJoinCode: text("qr_join_code"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const companyMemberships = pgTable("company_memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  joinedAt: timestamp("joined_at").notNull().default(sql`now()`),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   name: true,
@@ -81,3 +100,5 @@ export type Session = typeof sessions.$inferSelect;
 export type Speaker = typeof speakers.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type SavedSession = typeof savedSessions.$inferSelect;
+export type Company = typeof companies.$inferSelect;
+export type CompanyMembership = typeof companyMemberships.$inferSelect;

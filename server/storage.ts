@@ -24,6 +24,11 @@ export interface IStorage {
   getSavedSessions(userId: string): Promise<string[]>;
   saveSession(userId: string, sessionId: string): Promise<void>;
   unsaveSession(userId: string, sessionId: string): Promise<void>;
+  getCompanies(): Promise<schema.Company[]>;
+  getCompanyById(id: string): Promise<schema.Company | undefined>;
+  getCompanyByQRCode(qrJoinCode: string): Promise<schema.Company | undefined>;
+  joinCompany(userId: string, companyId: string): Promise<void>;
+  getUserCompanies(userId: string): Promise<schema.Company[]>;
   seedData(): Promise<void>;
 }
 
@@ -135,6 +140,33 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(schema.savedSessions.userId, userId), eq(schema.savedSessions.sessionId, sessionId)));
   }
 
+  async getCompanies(): Promise<schema.Company[]> {
+    return db.select().from(schema.companies).orderBy(schema.companies.category, schema.companies.name);
+  }
+
+  async getCompanyById(id: string): Promise<schema.Company | undefined> {
+    const [company] = await db.select().from(schema.companies).where(eq(schema.companies.id, id));
+    return company;
+  }
+
+  async getCompanyByQRCode(qrJoinCode: string): Promise<schema.Company | undefined> {
+    const [company] = await db.select().from(schema.companies).where(eq(schema.companies.qrJoinCode, qrJoinCode));
+    return company;
+  }
+
+  async joinCompany(userId: string, companyId: string): Promise<void> {
+    await db.insert(schema.companyMemberships).values({ userId, companyId }).onConflictDoNothing();
+  }
+
+  async getUserCompanies(userId: string): Promise<schema.Company[]> {
+    const memberships = await db
+      .select({ company: schema.companies })
+      .from(schema.companyMemberships)
+      .innerJoin(schema.companies, eq(schema.companyMemberships.companyId, schema.companies.id))
+      .where(eq(schema.companyMemberships.userId, userId));
+    return memberships.map(m => m.company);
+  }
+
   async seedData(): Promise<void> {
     const existingUsers = await db.select().from(schema.users).limit(1);
     if (existingUsers.length > 0) {
@@ -221,6 +253,31 @@ export class DatabaseStorage implements IStorage {
     ];
 
     await db.insert(schema.notifications).values(sampleNotifications);
+
+    const companies = [
+      { name: "BDO", category: "Accounting / Audit / Advisory", description: "Global network providing audit, tax, and advisory services to businesses worldwide.", isSpecialPartner: false },
+      { name: "EY (Ernst & Young)", category: "Accounting / Audit / Advisory", description: "One of the Big Four professional services firms offering assurance, tax, consulting and strategy services.", isSpecialPartner: false },
+      { name: "Moore MKW", category: "Accounting / Audit / Advisory", description: "Professional accounting and advisory services firm with a focus on medium-sized enterprises.", isSpecialPartner: false },
+      { name: "Eshuis", category: "Accounting / Audit / Advisory", description: "Regional accounting firm providing personalized financial services and business advice.", isSpecialPartner: false },
+      { name: "MitH Management", category: "Consulting / Finance / Strategy", description: "Strategic management consulting firm specializing in organizational transformation and leadership development.", isSpecialPartner: true, qrJoinCode: "SC2026-COMPANY-MITH" },
+      { name: "Robert Muntel", category: "Consulting / Finance / Strategy", description: "Independent consulting practice focused on finance strategy and risk management.", isSpecialPartner: false },
+      { name: "Appelboom Consultancy", category: "Consulting / Finance / Strategy", description: "Boutique consultancy specializing in business process optimization and digital transformation.", isSpecialPartner: false },
+      { name: "Capgemini", category: "Consulting / Finance / Strategy", description: "Global leader in consulting, technology services, and digital transformation.", isSpecialPartner: true, qrJoinCode: "SC2026-COMPANY-CAPGEMINI" },
+      { name: "Nedap", category: "Technology / Engineering / Industrial", description: "Technology company creating intelligent solutions for healthcare, security, and retail sectors.", isSpecialPartner: false },
+      { name: "Actemium", category: "Technology / Engineering / Industrial", description: "Industrial process automation and electrical engineering solutions provider.", isSpecialPartner: false },
+      { name: "Witteveen + Bos", category: "Technology / Engineering / Industrial", description: "Engineering and consultancy company focused on water, infrastructure, environment and construction.", isSpecialPartner: true, qrJoinCode: "SC2026-COMPANY-WITTEVEEN" },
+      { name: "Eaton", category: "Technology / Engineering / Industrial", description: "Power management company providing energy-efficient solutions for electrical systems.", isSpecialPartner: false },
+      { name: "Port of Twente", category: "Logistics / Transport / Infrastructure", description: "Inland port and multimodal logistics hub connecting European transportation networks.", isSpecialPartner: true, qrJoinCode: "SC2026-COMPANY-PORTTWENTE" },
+      { name: "Cargill", category: "Logistics / Transport / Infrastructure", description: "Global food and agriculture company providing food, agricultural, financial and industrial products.", isSpecialPartner: true, qrJoinCode: "SC2026-COMPANY-CARGILL" },
+      { name: "Achmea", category: "Insurance / Risk Services", description: "Leading Dutch insurance company offering health, life, and property insurance solutions.", isSpecialPartner: true, qrJoinCode: "SC2026-COMPANY-ACHMEA" },
+      { name: "Bolk Transport", category: "Logistics / Transport / Infrastructure", description: "Specialized heavy transport and logistics company for exceptional cargo.", isSpecialPartner: false },
+      { name: "Nijhof Wassink", category: "Logistics / Transport / Infrastructure", description: "International transport and logistics company with comprehensive supply chain solutions.", isSpecialPartner: false },
+      { name: "E. van Wijk", category: "Logistics / Transport / Infrastructure", description: "Established transport company specializing in container and bulk logistics.", isSpecialPartner: false },
+      { name: "CAPE", category: "Logistics / Transport / Infrastructure", description: "Innovative logistics solutions provider with focus on sustainable transport.", isSpecialPartner: false },
+      { name: "AON", category: "Insurance / Risk Services", description: "Global professional services firm providing risk, retirement and health solutions.", isSpecialPartner: false },
+    ];
+
+    await db.insert(schema.companies).values(companies);
 
     console.log("Database seeded successfully!");
   }
