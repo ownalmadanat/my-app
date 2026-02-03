@@ -8,8 +8,9 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 import { AppColors, Spacing, BorderRadius, Shadows } from "@/constants/theme";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/query-client";
 import * as Haptics from "expo-haptics";
 
 interface Company {
@@ -47,6 +48,7 @@ const CATEGORY_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
 
 export default function CompanyProfileScreen() {
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const route = useRoute<RouteProp<CompanyProfileRouteParams, "CompanyProfile">>();
   const { companyId } = route.params;
   const headerHeight = useHeaderHeight();
@@ -55,10 +57,14 @@ export default function CompanyProfileScreen() {
 
   const { data: company, isLoading } = useQuery<Company>({
     queryKey: ["/api/companies", companyId],
+    enabled: isAuthenticated && !!companyId,
+    staleTime: 0,
   });
 
   const { data: userCompanies = [] } = useQuery<Company[]>({
     queryKey: ["/api/user/companies"],
+    enabled: isAuthenticated,
+    staleTime: 0,
   });
 
   const isMember = userCompanies.some(c => c.id === companyId);

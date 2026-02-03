@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from "react";
 import { View, StyleSheet, FlatList, Pressable, TextInput, RefreshControl } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 import { AppColors, Spacing, BorderRadius, Shadows } from "@/constants/theme";
 import * as Haptics from "expo-haptics";
 
@@ -41,6 +42,7 @@ const CATEGORY_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
 export default function CompaniesScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
+  const { isAuthenticated } = useAuth();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,6 +50,8 @@ export default function CompaniesScreen() {
 
   const { data: companies = [], isLoading, refetch, isRefetching } = useQuery<Company[]>({
     queryKey: ["/api/companies"],
+    enabled: isAuthenticated,
+    staleTime: 0,
   });
 
   const categories = useMemo(() => {
