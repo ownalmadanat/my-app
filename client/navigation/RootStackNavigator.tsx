@@ -1,34 +1,41 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import MainTabNavigator from "@/navigation/MainTabNavigator";
-import ModalScreen from "@/screens/ModalScreen";
+import { useAuth } from "@/contexts/AuthContext";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
+import LoginScreen from "@/screens/LoginScreen";
+import DrawerNavigator from "@/navigation/DrawerNavigator";
 
 export type RootStackParamList = {
+  Login: undefined;
   Main: undefined;
-  Modal: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStackNavigator() {
   const screenOptions = useScreenOptions();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingOverlay message="Loading..." />;
+  }
 
   return (
     <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen
-        name="Main"
-        component={MainTabNavigator}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Modal"
-        component={ModalScreen}
-        options={{
-          presentation: "modal",
-          headerTitle: "Modal",
-        }}
-      />
+      {isAuthenticated ? (
+        <Stack.Screen
+          name="Main"
+          component={DrawerNavigator}
+          options={{ headerShown: false }}
+        />
+      ) : (
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+      )}
     </Stack.Navigator>
   );
 }
