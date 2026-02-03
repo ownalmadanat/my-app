@@ -330,6 +330,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/companies", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const companies = await storage.getCompanies();
+      return res.json(companies);
+    } catch (error) {
+      console.error("Get companies error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/companies/:id", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const company = await storage.getCompanyById(id);
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      return res.json(company);
+    } catch (error) {
+      console.error("Get company error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/company/join-via-qr", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      const { qrJoinCode } = req.body;
+
+      if (!qrJoinCode) {
+        return res.status(400).json({ success: false, message: "QR code is required" });
+      }
+
+      const company = await storage.getCompanyByQRCode(qrJoinCode);
+
+      if (!company) {
+        return res.status(404).json({ success: false, message: "Company not found" });
+      }
+
+      if (!company.isSpecialPartner) {
+        return res.status(400).json({ success: false, message: "This company does not have private access" });
+      }
+
+      await storage.joinCompany(userId, company.id);
+
+      return res.json({
+        success: true,
+        company: {
+          id: company.id,
+          name: company.name,
+          category: company.category,
+        },
+        message: `Successfully joined ${company.name}`,
+      });
+    } catch (error) {
+      console.error("Join company error:", error);
+      return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/user/companies", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      const companies = await storage.getUserCompanies(userId);
+      return res.json(companies);
+    } catch (error) {
+      console.error("Get user companies error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
