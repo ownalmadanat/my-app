@@ -17,6 +17,8 @@ import SpeakersScreen from "@/screens/attendee/SpeakersScreen";
 import MyQRCodeScreen from "@/screens/attendee/MyQRCodeScreen";
 import NotificationsScreen from "@/screens/shared/NotificationsScreen";
 import ProfileScreen from "@/screens/shared/ProfileScreen";
+import CompaniesScreen from "@/screens/shared/CompaniesScreen";
+import CompanyProfileScreen from "@/screens/shared/CompanyProfileScreen";
 
 import StaffDashboardScreen from "@/screens/staff/StaffDashboardScreen";
 import ScanQRScreen from "@/screens/staff/ScanQRScreen";
@@ -27,6 +29,8 @@ export type DrawerParamList = {
   Home: undefined;
   Agenda: undefined;
   Speakers: undefined;
+  Companies: undefined;
+  CompanyProfile: { companyId: string };
   MyQRCode: undefined;
   Notifications: undefined;
   Profile: undefined;
@@ -91,6 +95,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
     { name: "Home", icon: "home" as const, label: "Home" },
     { name: "Agenda", icon: "calendar" as const, label: "Agenda" },
     { name: "Speakers", icon: "users" as const, label: "Speakers" },
+    { name: "Companies", icon: "briefcase" as const, label: "Companies" },
     { name: "MyQRCode", icon: "grid" as const, label: "My QR Code" },
     { name: "Notifications", icon: "bell" as const, label: "Notifications" },
     { name: "Profile", icon: "user" as const, label: "Profile" },
@@ -100,6 +105,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
     { name: "Dashboard", icon: "home" as const, label: "Dashboard" },
     { name: "ScanQR", icon: "camera" as const, label: "Scan QR" },
     { name: "AttendeeSearch", icon: "search" as const, label: "Attendee Search" },
+    { name: "Companies", icon: "briefcase" as const, label: "Companies" },
     { name: "Stats", icon: "bar-chart-2" as const, label: "Statistics" },
     { name: "Notifications", icon: "bell" as const, label: "Notifications" },
   ];
@@ -219,6 +225,16 @@ export default function DrawerNavigator() {
             options={{ headerTitle: "Statistics" }}
           />
           <Drawer.Screen
+            name="Companies"
+            component={CompaniesScreen}
+            options={{ headerTitle: "Companies" }}
+          />
+          <Drawer.Screen
+            name="CompanyProfile"
+            component={CompanyProfileScreen}
+            options={{ headerTitle: "Company", drawerItemStyle: { display: "none" } }}
+          />
+          <Drawer.Screen
             name="Notifications"
             component={NotificationsScreen}
             options={{ headerTitle: "Notifications" }}
@@ -240,6 +256,16 @@ export default function DrawerNavigator() {
             name="Speakers"
             component={SpeakersScreen}
             options={{ headerTitle: "Speakers" }}
+          />
+          <Drawer.Screen
+            name="Companies"
+            component={CompaniesScreen}
+            options={{ headerTitle: "Companies" }}
+          />
+          <Drawer.Screen
+            name="CompanyProfile"
+            component={CompanyProfileScreen}
+            options={{ headerTitle: "Company", drawerItemStyle: { display: "none" } }}
           />
           <Drawer.Screen
             name="MyQRCode"
