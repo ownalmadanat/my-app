@@ -9,11 +9,11 @@ import { AppColors, BorderRadius, Spacing, Shadows } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-type Step = "role_select" | "auth_mode" | "login_email" | "login_password" | "login_create_password" | "signup_form";
+type Step = "role_select" | "auth_mode" | "login_email" | "login_password" | "login_create_password" | "signup_form" | "forgot_email" | "forgot_new_password";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { login, setPassword, register } = useAuth();
+  const { login, setPassword, register, resetPassword } = useAuth();
 
   const [step, setStep] = useState<Step>("role_select");
   const [selectedRole, setSelectedRole] = useState<"attendee" | "staff">("attendee");
@@ -156,6 +156,56 @@ export default function LoginScreen() {
     }
   };
 
+  const handleForgotEmailSubmit = async () => {
+    if (!email.trim()) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    const result = await login(email.trim().toLowerCase());
+    setIsLoading(false);
+
+    if (result.success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else if (result.error?.includes("not registered")) {
+      setError("No account found with this email address");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else {
+      setStep("forgot_new_password");
+      setPasswordValue("");
+      setConfirmPassword("");
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!password || password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    const result = await resetPassword(email.trim().toLowerCase(), password);
+
+    setIsLoading(false);
+
+    if (result.success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      setError(result.error || "Password reset failed");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+
   const handleBack = () => {
     setError("");
     if (step === "auth_mode") {
@@ -164,6 +214,13 @@ export default function LoginScreen() {
       setStep("auth_mode");
     } else if (step === "login_password" || step === "login_create_password") {
       setStep("login_email");
+      setPasswordValue("");
+      setConfirmPassword("");
+    } else if (step === "forgot_email") {
+      setStep("login_password");
+      setPasswordValue("");
+    } else if (step === "forgot_new_password") {
+      setStep("forgot_email");
       setPasswordValue("");
       setConfirmPassword("");
     }
@@ -355,6 +412,18 @@ export default function LoginScreen() {
                 <Button onPress={handlePasswordSubmit} disabled={isLoading} style={styles.button} testID="button-signin-submit">
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
+
+                <Pressable
+                  onPress={() => {
+                    setError("");
+                    setPasswordValue("");
+                    setStep("forgot_email");
+                  }}
+                  style={styles.forgotPasswordButton}
+                  testID="button-forgot-password"
+                >
+                  <ThemedText style={styles.forgotPasswordText}>Forgot Password?</ThemedText>
+                </Pressable>
               </>
             ) : step === "login_create_password" ? (
               <>
@@ -497,6 +566,93 @@ export default function LoginScreen() {
 
                 <Button onPress={handleSignup} disabled={isLoading} style={styles.button} testID="button-signup-submit">
                   {isLoading ? "Creating Account..." : "Sign Up"}
+                </Button>
+              </>
+            ) : step === "forgot_email" ? (
+              <>
+                <ThemedText type="h3" style={styles.cardTitle}>
+                  Forgot Password
+                </ThemedText>
+                <ThemedText style={styles.cardSubtitle}>
+                  Enter your email to verify your account
+                </ThemedText>
+
+                <View style={styles.inputContainer}>
+                  <Feather name="mail" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email address"
+                    placeholderTextColor="#9CA3AF"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    testID="input-forgot-email"
+                  />
+                </View>
+
+                {error ? (
+                  <View style={styles.errorContainer}>
+                    <Feather name="alert-circle" size={16} color={AppColors.error} />
+                    <ThemedText style={styles.errorText}>{error}</ThemedText>
+                  </View>
+                ) : null}
+
+                <Button onPress={handleForgotEmailSubmit} disabled={isLoading} style={styles.button} testID="button-forgot-continue">
+                  {isLoading ? "Verifying..." : "Continue"}
+                </Button>
+              </>
+            ) : step === "forgot_new_password" ? (
+              <>
+                <ThemedText type="h3" style={styles.cardTitle}>
+                  Reset Password
+                </ThemedText>
+                <ThemedText style={styles.cardSubtitle}>
+                  Create a new password for your account
+                </ThemedText>
+
+                <View style={styles.inputContainer}>
+                  <Feather name="lock" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="New password"
+                    placeholderTextColor="#9CA3AF"
+                    value={password}
+                    onChangeText={setPasswordValue}
+                    secureTextEntry={!showPassword}
+                    editable={!isLoading}
+                    testID="input-reset-password"
+                  />
+                  <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+                    <Feather name={showPassword ? "eye-off" : "eye"} size={20} color="#6B7280" />
+                  </Pressable>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Feather name="lock" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm new password"
+                    placeholderTextColor="#9CA3AF"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showPassword}
+                    editable={!isLoading}
+                    testID="input-reset-confirm-password"
+                  />
+                </View>
+
+                {error ? (
+                  <View style={styles.errorContainer}>
+                    <Feather name="alert-circle" size={16} color={AppColors.error} />
+                    <ThemedText style={styles.errorText}>{error}</ThemedText>
+                  </View>
+                ) : null}
+
+                <Button onPress={handleResetPassword} disabled={isLoading} style={styles.button} testID="button-reset-submit">
+                  {isLoading ? "Resetting..." : "Reset Password"}
                 </Button>
               </>
             ) : null}
@@ -654,5 +810,14 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: Spacing.sm,
+  },
+  forgotPasswordButton: {
+    alignItems: "center",
+    marginTop: Spacing.lg,
+  },
+  forgotPasswordText: {
+    color: AppColors.primary,
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
