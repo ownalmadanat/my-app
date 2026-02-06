@@ -8,7 +8,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { HeaderTitle } from "@/components/HeaderTitle";
-import { AppColors, BorderRadius, Spacing, Shadows } from "@/constants/theme";
+import { AppColors, BorderRadius, Spacing } from "@/constants/theme";
 import * as Haptics from "expo-haptics";
 
 import AttendeeHomeScreen from "@/screens/attendee/AttendeeHomeScreen";
@@ -19,6 +19,8 @@ import NotificationsScreen from "@/screens/shared/NotificationsScreen";
 import ProfileScreen from "@/screens/shared/ProfileScreen";
 import CompaniesScreen from "@/screens/shared/CompaniesScreen";
 import CompanyProfileScreen from "@/screens/shared/CompanyProfileScreen";
+import SettingsScreen from "@/screens/shared/SettingsScreen";
+import AboutScreen from "@/screens/shared/AboutScreen";
 
 import StaffDashboardScreen from "@/screens/staff/StaffDashboardScreen";
 import ScanQRScreen from "@/screens/staff/ScanQRScreen";
@@ -34,6 +36,8 @@ export type DrawerParamList = {
   MyQRCode: undefined;
   Notifications: undefined;
   Profile: undefined;
+  Settings: undefined;
+  About: undefined;
   Dashboard: undefined;
   ScanQR: undefined;
   AttendeeSearch: undefined;
@@ -48,9 +52,10 @@ interface DrawerItemProps {
   isActive: boolean;
   onPress: () => void;
   theme: any;
+  badge?: string;
 }
 
-function DrawerItem({ icon, label, isActive, onPress, theme }: DrawerItemProps) {
+function DrawerItem({ icon, label, isActive, onPress, theme, badge }: DrawerItemProps) {
   return (
     <Pressable
       onPress={() => {
@@ -78,7 +83,21 @@ function DrawerItem({ icon, label, isActive, onPress, theme }: DrawerItemProps) 
       >
         {label}
       </ThemedText>
+      {badge ? (
+        <View style={[styles.badge, { backgroundColor: AppColors.warning }]}>
+          <ThemedText style={styles.badgeText}>{badge}</ThemedText>
+        </View>
+      ) : null}
     </Pressable>
+  );
+}
+
+function SectionDivider({ label, theme }: { label: string; theme: any }) {
+  return (
+    <View style={styles.sectionDivider}>
+      <View style={[styles.sectionLine, { backgroundColor: theme.border }]} />
+      <ThemedText style={[styles.sectionLabel, { color: theme.textSecondary }]}>{label}</ThemedText>
+    </View>
   );
 }
 
@@ -91,26 +110,32 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   const isStaff = user?.role === "staff";
   const currentRouteName = state.routes[state.index]?.name;
 
-  const attendeeItems = [
+  const staffMainItems = [
+    { name: "Dashboard", icon: "home" as const, label: "Dashboard" },
+    { name: "ScanQR", icon: "camera" as const, label: "Scan QR Code" },
+    { name: "AttendeeSearch", icon: "search" as const, label: "Attendee List" },
+    { name: "Stats", icon: "bar-chart-2" as const, label: "Statistics" },
+  ];
+
+  const staffBrowseItems = [
+    { name: "Companies", icon: "briefcase" as const, label: "Companies" },
+    { name: "Notifications", icon: "bell" as const, label: "Notifications" },
+  ];
+
+  const attendeeMainItems = [
     { name: "Home", icon: "home" as const, label: "Home" },
     { name: "Agenda", icon: "calendar" as const, label: "Agenda" },
     { name: "Speakers", icon: "users" as const, label: "Speakers" },
     { name: "Companies", icon: "briefcase" as const, label: "Companies" },
     { name: "MyQRCode", icon: "grid" as const, label: "My QR Code" },
     { name: "Notifications", icon: "bell" as const, label: "Notifications" },
+  ];
+
+  const accountItems = [
     { name: "Profile", icon: "user" as const, label: "Profile" },
+    { name: "Settings", icon: "settings" as const, label: "Settings" },
+    { name: "About", icon: "info" as const, label: "About" },
   ];
-
-  const staffItems = [
-    { name: "Dashboard", icon: "home" as const, label: "Dashboard" },
-    { name: "ScanQR", icon: "camera" as const, label: "Scan QR" },
-    { name: "AttendeeSearch", icon: "search" as const, label: "Attendee Search" },
-    { name: "Companies", icon: "briefcase" as const, label: "Companies" },
-    { name: "Stats", icon: "bar-chart-2" as const, label: "Statistics" },
-    { name: "Notifications", icon: "bell" as const, label: "Notifications" },
-  ];
-
-  const items = isStaff ? staffItems : attendeeItems;
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -144,14 +169,54 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
           <ThemedText type="h4" style={styles.userName} numberOfLines={1}>
             {user?.name || "User"}
           </ThemedText>
-          <ThemedText style={[styles.userRole, { color: theme.primary }]}>
-            {isStaff ? "Staff" : "Attendee"}
-          </ThemedText>
+          <View style={[styles.roleBadge, { backgroundColor: isStaff ? `${AppColors.warning}20` : `${AppColors.primary}15` }]}>
+            <ThemedText style={[styles.userRole, { color: isStaff ? AppColors.warning : theme.primary }]}>
+              {isStaff ? "Staff" : "Attendee"}
+            </ThemedText>
+          </View>
         </View>
       </View>
 
       <View style={styles.menuSection}>
-        {items.map((item) => (
+        {isStaff ? (
+          <>
+            {staffMainItems.map((item) => (
+              <DrawerItem
+                key={item.name}
+                icon={item.icon}
+                label={item.label}
+                isActive={currentRouteName === item.name}
+                onPress={() => navigation.navigate(item.name)}
+                theme={theme}
+              />
+            ))}
+            <SectionDivider label="Browse" theme={theme} />
+            {staffBrowseItems.map((item) => (
+              <DrawerItem
+                key={item.name}
+                icon={item.icon}
+                label={item.label}
+                isActive={currentRouteName === item.name}
+                onPress={() => navigation.navigate(item.name)}
+                theme={theme}
+              />
+            ))}
+          </>
+        ) : (
+          attendeeMainItems.map((item) => (
+            <DrawerItem
+              key={item.name}
+              icon={item.icon}
+              label={item.label}
+              isActive={currentRouteName === item.name}
+              onPress={() => navigation.navigate(item.name)}
+              theme={theme}
+            />
+          ))
+        )}
+
+        <SectionDivider label="Account" theme={theme} />
+        {accountItems.map((item) => (
           <DrawerItem
             key={item.name}
             icon={item.icon}
@@ -207,7 +272,7 @@ export default function DrawerNavigator() {
           <Drawer.Screen
             name="Dashboard"
             component={StaffDashboardScreen}
-            options={{ headerTitle: () => <HeaderTitle title="Dashboard" /> }}
+            options={{ headerTitle: () => <HeaderTitle title="Staff Dashboard" /> }}
           />
           <Drawer.Screen
             name="ScanQR"
@@ -217,7 +282,7 @@ export default function DrawerNavigator() {
           <Drawer.Screen
             name="AttendeeSearch"
             component={AttendeeSearchScreen}
-            options={{ headerTitle: "Attendee Search" }}
+            options={{ headerTitle: "Attendee List" }}
           />
           <Drawer.Screen
             name="Stats"
@@ -238,6 +303,21 @@ export default function DrawerNavigator() {
             name="Notifications"
             component={NotificationsScreen}
             options={{ headerTitle: "Notifications" }}
+          />
+          <Drawer.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ headerTitle: "Profile" }}
+          />
+          <Drawer.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{ headerTitle: "Settings" }}
+          />
+          <Drawer.Screen
+            name="About"
+            component={AboutScreen}
+            options={{ headerTitle: "About" }}
           />
         </>
       ) : (
@@ -282,6 +362,16 @@ export default function DrawerNavigator() {
             component={ProfileScreen}
             options={{ headerTitle: "Profile" }}
           />
+          <Drawer.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{ headerTitle: "Settings" }}
+          />
+          <Drawer.Screen
+            name="About"
+            component={AboutScreen}
+            options={{ headerTitle: "About" }}
+          />
         </>
       )}
     </Drawer.Navigator>
@@ -325,14 +415,37 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 16,
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  roleBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.xs,
   },
   userRole: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   menuSection: {
     flex: 1,
+  },
+  sectionDivider: {
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+  },
+  sectionLine: {
+    height: 1,
+    marginBottom: Spacing.sm,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   drawerItem: {
     flexDirection: "row",
@@ -346,6 +459,19 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.lg,
     fontSize: 16,
     fontWeight: "500",
+    flex: 1,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 20,
+    alignItems: "center",
+  },
+  badgeText: {
+    color: AppColors.white,
+    fontSize: 11,
+    fontWeight: "700",
   },
   footer: {
     paddingTop: Spacing.xl,

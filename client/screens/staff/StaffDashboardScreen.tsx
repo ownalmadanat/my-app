@@ -1,15 +1,17 @@
 import React from "react";
-import { StyleSheet, View, ScrollView, FlatList, RefreshControl } from "react-native";
+import { StyleSheet, View, ScrollView, RefreshControl, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
+import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { StatCard } from "@/components/StatCard";
-import { AttendeeCard } from "@/components/AttendeeCard";
 import { CardSkeleton } from "@/components/SkeletonLoader";
+import { GradientBackground } from "@/components/GradientBackground";
 import { useTheme } from "@/hooks/useTheme";
 import { AppColors, BorderRadius, Spacing, Shadows } from "@/constants/theme";
+import * as Haptics from "expo-haptics";
 
 interface Stats {
   totalRegistered: number;
@@ -28,6 +30,7 @@ export default function StaffDashboardScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const { theme } = useTheme();
+  const navigation = useNavigation();
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<Stats>({
     queryKey: ["/api/stats"],
@@ -49,8 +52,6 @@ export default function StaffDashboardScreen() {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  const isLoading = statsLoading || checkInsLoading;
-
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.backgroundRoot }]}
@@ -67,6 +68,51 @@ export default function StaffDashboardScreen() {
         />
       }
     >
+      <ThemedText type="h3" style={styles.sectionTitle}>
+        Check-in Tools
+      </ThemedText>
+
+      <View style={styles.checkInActions}>
+        <Pressable
+          style={({ pressed }) => [styles.checkInActionCard, { opacity: pressed ? 0.9 : 1 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            navigation.navigate("ScanQR" as never);
+          }}
+          testID="button-scan-qr"
+        >
+          <GradientBackground
+            colors={[AppColors.primary, AppColors.primaryLight]}
+            style={styles.checkInActionGradient}
+          >
+            <View style={styles.checkInActionIcon}>
+              <Feather name="camera" size={28} color={AppColors.white} />
+            </View>
+            <ThemedText type="h4" style={styles.checkInActionTitle}>Scan QR Code</ThemedText>
+            <ThemedText style={styles.checkInActionSub}>Primary check-in method</ThemedText>
+          </GradientBackground>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.checkInActionCard, { opacity: pressed ? 0.9 : 1 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            navigation.navigate("AttendeeSearch" as never);
+          }}
+          testID="button-manual-checkin"
+        >
+          <View style={[styles.checkInActionFallback, { backgroundColor: theme.cardBackground }, Shadows.medium]}>
+            <View style={[styles.checkInActionIconAlt, { backgroundColor: `${AppColors.warning}15` }]}>
+              <Feather name="search" size={28} color={AppColors.warning} />
+            </View>
+            <ThemedText type="h4" style={styles.checkInActionTitleAlt}>Manual Check-in</ThemedText>
+            <ThemedText style={[styles.checkInActionSubAlt, { color: theme.textSecondary }]}>
+              Backup if QR fails
+            </ThemedText>
+          </View>
+        </Pressable>
+      </View>
+
       <ThemedText type="h3" style={styles.sectionTitle}>
         Check-in Statistics
       </ThemedText>
@@ -164,6 +210,65 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: Spacing.lg,
+  },
+  checkInActions: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    marginBottom: Spacing["2xl"],
+  },
+  checkInActionCard: {
+    flex: 1,
+  },
+  checkInActionGradient: {
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    alignItems: "center",
+    minHeight: 140,
+    justifyContent: "center",
+  },
+  checkInActionFallback: {
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    alignItems: "center",
+    minHeight: 140,
+    justifyContent: "center",
+  },
+  checkInActionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  checkInActionIconAlt: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  checkInActionTitle: {
+    color: AppColors.white,
+    fontSize: 15,
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  checkInActionTitleAlt: {
+    fontSize: 15,
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  checkInActionSub: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    textAlign: "center",
+  },
+  checkInActionSubAlt: {
+    fontSize: 12,
+    textAlign: "center",
   },
   statsRow: {
     flexDirection: "row",
