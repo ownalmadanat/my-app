@@ -33,7 +33,7 @@ export default function AttendeeSearchScreen() {
 
   const checkInMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const response = await apiRequest("POST", "/api/manual-check-in", { userId });
+      const response = await apiRequest("/api/manual-check-in", { method: "POST", body: JSON.stringify({ userId }) });
       return response.json();
     },
     onSuccess: () => {

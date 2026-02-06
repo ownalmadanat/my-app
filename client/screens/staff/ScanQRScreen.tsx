@@ -35,7 +35,7 @@ export default function ScanQRScreen() {
 
   const checkInMutation = useMutation({
     mutationFn: async (qrCodeValue: string): Promise<CheckInResponse> => {
-      const response = await apiRequest("POST", "/api/check-in", { qrCodeValue });
+      const response = await apiRequest("/api/check-in", { method: "POST", body: JSON.stringify({ qrCodeValue }) });
       return response.json();
     },
     onSuccess: (data) => {

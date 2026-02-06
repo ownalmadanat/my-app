@@ -43,7 +43,7 @@ export default function AgendaScreen() {
 
   const saveSessionMutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      await apiRequest("POST", "/api/saved-sessions", { sessionId });
+      await apiRequest("/api/saved-sessions", { method: "POST", body: JSON.stringify({ sessionId }) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/saved-sessions"] });
@@ -52,7 +52,7 @@ export default function AgendaScreen() {
 
   const unsaveSessionMutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      await apiRequest("DELETE", `/api/saved-sessions/${sessionId}`);
+      await apiRequest(`/api/saved-sessions/${sessionId}`, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/saved-sessions"] });
