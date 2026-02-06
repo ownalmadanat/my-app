@@ -19,6 +19,7 @@ interface AuthContextType {
   login: (email: string, password?: string) => Promise<{ success: boolean; needsPassword?: boolean; error?: string }>;
   setPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (email: string, name: string, password: string, role: string) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -165,6 +166,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const baseUrl = getApiUrl();
+      const response = await fetch(new URL("/api/auth/reset-password", baseUrl).href, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        await setToken(data.token);
+        setUser(data.user);
+        return { success: true };
+      }
+
+      return { success: false, error: data.message || "Password reset failed" };
+    } catch (error) {
+      return { success: false, error: "Network error. Please try again." };
+    }
+  };
+
   const logout = async () => {
     await removeToken();
     setUser(null);
@@ -189,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         setPassword,
         register,
+        resetPassword,
         logout,
         refreshUser,
       }}

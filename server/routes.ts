@@ -173,6 +173,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { email, newPassword } = req.body;
+
+      if (!email || !newPassword) {
+        return res.status(400).json({ message: "Email and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      const user = await storage.getUserByEmail(email.toLowerCase());
+
+      if (!user) {
+        return res.status(404).json({ message: "No account found with this email" });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      await storage.updateUserPassword(user.id, passwordHash);
+
+      const token = generateToken(user);
+      return res.json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          qrCodeValue: user.qrCodeValue,
+          checkedIn: user.checkedIn,
+        },
+      });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/auth/me", authMiddleware, async (req: Request, res: Response) => {
     try {
       const user = await storage.getUserById((req as any).userId);
