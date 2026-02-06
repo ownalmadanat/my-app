@@ -9,19 +9,47 @@ import { AppColors, BorderRadius, Spacing, Shadows } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-type Step = "email" | "password" | "create_password";
+type Step = "role_select" | "auth_mode" | "login_email" | "login_password" | "login_create_password" | "signup_form";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { login, setPassword } = useAuth();
+  const { login, setPassword, register } = useAuth();
 
-  const [step, setStep] = useState<Step>("email");
+  const [step, setStep] = useState<Step>("role_select");
+  const [selectedRole, setSelectedRole] = useState<"attendee" | "staff">("attendee");
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPasswordValue] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const clearInputs = () => {
+    setEmail("");
+    setName("");
+    setPasswordValue("");
+    setConfirmPassword("");
+    setError("");
+    setShowPassword(false);
+  };
+
+  const handleRoleSelect = (role: "attendee" | "staff") => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectedRole(role);
+    setStep("auth_mode");
+    clearInputs();
+  };
+
+  const handleAuthMode = (mode: "login" | "signup") => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (mode === "login") {
+      setStep("login_email");
+    } else {
+      setStep("signup_form");
+    }
+    clearInputs();
+  };
 
   const handleEmailSubmit = async () => {
     if (!email.trim()) {
@@ -39,12 +67,12 @@ export default function LoginScreen() {
     if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else if (result.needsPassword) {
-      setStep("create_password");
+      setStep("login_create_password");
     } else if (result.error?.includes("not registered")) {
-      setError("You are not registered for Stress Congress 2026");
+      setError("This email is not registered. Try signing up instead.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } else {
-      setStep("password");
+      setStep("login_password");
     }
   };
 
@@ -95,12 +123,55 @@ export default function LoginScreen() {
     }
   };
 
-  const handleBack = () => {
-    setStep("email");
-    setPasswordValue("");
-    setConfirmPassword("");
+  const handleSignup = async () => {
+    if (!name.trim()) {
+      setError("Please enter your full name");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Please enter your email address");
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
     setError("");
+
+    const result = await register(email.trim().toLowerCase(), name.trim(), password, selectedRole);
+
+    setIsLoading(false);
+
+    if (result.success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      setError(result.error || "Registration failed");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
   };
+
+  const handleBack = () => {
+    setError("");
+    if (step === "auth_mode") {
+      setStep("role_select");
+    } else if (step === "login_email" || step === "signup_form") {
+      setStep("auth_mode");
+    } else if (step === "login_password" || step === "login_create_password") {
+      setStep("login_email");
+      setPasswordValue("");
+      setConfirmPassword("");
+    }
+  };
+
+  const showBackButton = step !== "role_select";
+
+  const roleLabel = selectedRole === "staff" ? "Staff" : "Attendee";
 
   return (
     <GradientBackground colors={[AppColors.primary, AppColors.primaryLight]}>
@@ -128,29 +199,101 @@ export default function LoginScreen() {
           </View>
 
           <View style={[styles.card, Shadows.large]}>
-            {step !== "email" ? (
+            {showBackButton ? (
               <Pressable onPress={handleBack} style={styles.backButton}>
                 <Feather name="arrow-left" size={20} color={AppColors.primary} />
                 <ThemedText style={styles.backText}>Back</ThemedText>
               </Pressable>
             ) : null}
 
-            {step === "email" ? (
+            {step === "role_select" ? (
               <>
                 <ThemedText type="h3" style={styles.cardTitle}>
                   Welcome
+                </ThemedText>
+                <ThemedText style={styles.cardSubtitle}>
+                  How are you joining the conference?
+                </ThemedText>
+
+                <Pressable
+                  onPress={() => handleRoleSelect("attendee")}
+                  style={({ pressed }) => [styles.roleCard, { opacity: pressed ? 0.8 : 1 }]}
+                  testID="button-role-attendee"
+                >
+                  <View style={[styles.roleIconContainer, { backgroundColor: `${AppColors.primary}15` }]}>
+                    <Feather name="user" size={28} color={AppColors.primary} />
+                  </View>
+                  <View style={styles.roleContent}>
+                    <ThemedText type="h4" style={styles.roleTitle}>Attendee</ThemedText>
+                    <ThemedText style={styles.roleDescription}>
+                      Attending the conference sessions
+                    </ThemedText>
+                  </View>
+                  <Feather name="chevron-right" size={22} color="#9CA3AF" />
+                </Pressable>
+
+                <Pressable
+                  onPress={() => handleRoleSelect("staff")}
+                  style={({ pressed }) => [styles.roleCard, styles.roleCardLast, { opacity: pressed ? 0.8 : 1 }]}
+                  testID="button-role-staff"
+                >
+                  <View style={[styles.roleIconContainer, { backgroundColor: `${AppColors.warning}15` }]}>
+                    <Feather name="shield" size={28} color={AppColors.warning} />
+                  </View>
+                  <View style={styles.roleContent}>
+                    <ThemedText type="h4" style={styles.roleTitle}>Staff</ThemedText>
+                    <ThemedText style={styles.roleDescription}>
+                      Managing and organizing the event
+                    </ThemedText>
+                  </View>
+                  <Feather name="chevron-right" size={22} color="#9CA3AF" />
+                </Pressable>
+              </>
+            ) : step === "auth_mode" ? (
+              <>
+                <View style={[styles.roleBadge, { backgroundColor: selectedRole === "staff" ? `${AppColors.warning}15` : `${AppColors.primary}15` }]}>
+                  <Feather
+                    name={selectedRole === "staff" ? "shield" : "user"}
+                    size={16}
+                    color={selectedRole === "staff" ? AppColors.warning : AppColors.primary}
+                  />
+                  <ThemedText style={[styles.roleBadgeText, { color: selectedRole === "staff" ? AppColors.warning : AppColors.primary }]}>
+                    {roleLabel}
+                  </ThemedText>
+                </View>
+
+                <ThemedText type="h3" style={styles.cardTitle}>
+                  Sign In or Sign Up
+                </ThemedText>
+                <ThemedText style={styles.cardSubtitle}>
+                  Do you already have an account?
+                </ThemedText>
+
+                <Button onPress={() => handleAuthMode("login")} style={styles.authModeButton} testID="button-signin">
+                  Sign In
+                </Button>
+
+                <Pressable
+                  onPress={() => handleAuthMode("signup")}
+                  style={({ pressed }) => [styles.signupButton, { opacity: pressed ? 0.8 : 1 }]}
+                  testID="button-signup"
+                >
+                  <ThemedText style={styles.signupButtonText}>
+                    Create New Account
+                  </ThemedText>
+                </Pressable>
+              </>
+            ) : step === "login_email" ? (
+              <>
+                <ThemedText type="h3" style={styles.cardTitle}>
+                  Sign In
                 </ThemedText>
                 <ThemedText style={styles.cardSubtitle}>
                   Enter your registered email to continue
                 </ThemedText>
 
                 <View style={styles.inputContainer}>
-                  <Feather
-                    name="mail"
-                    size={20}
-                    color="#6B7280"
-                    style={styles.inputIcon}
-                  />
+                  <Feather name="mail" size={20} color="#6B7280" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Email address"
@@ -161,6 +304,7 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
+                    testID="input-email"
                   />
                 </View>
 
@@ -171,11 +315,11 @@ export default function LoginScreen() {
                   </View>
                 ) : null}
 
-                <Button onPress={handleEmailSubmit} disabled={isLoading} style={styles.button}>
+                <Button onPress={handleEmailSubmit} disabled={isLoading} style={styles.button} testID="button-continue">
                   {isLoading ? "Checking..." : "Continue"}
                 </Button>
               </>
-            ) : step === "password" ? (
+            ) : step === "login_password" ? (
               <>
                 <ThemedText type="h3" style={styles.cardTitle}>
                   Welcome Back
@@ -185,12 +329,7 @@ export default function LoginScreen() {
                 </ThemedText>
 
                 <View style={styles.inputContainer}>
-                  <Feather
-                    name="lock"
-                    size={20}
-                    color="#6B7280"
-                    style={styles.inputIcon}
-                  />
+                  <Feather name="lock" size={20} color="#6B7280" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Password"
@@ -199,16 +338,10 @@ export default function LoginScreen() {
                     onChangeText={setPasswordValue}
                     secureTextEntry={!showPassword}
                     editable={!isLoading}
+                    testID="input-password"
                   />
-                  <Pressable
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeButton}
-                  >
-                    <Feather
-                      name={showPassword ? "eye-off" : "eye"}
-                      size={20}
-                      color="#6B7280"
-                    />
+                  <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+                    <Feather name={showPassword ? "eye-off" : "eye"} size={20} color="#6B7280" />
                   </Pressable>
                 </View>
 
@@ -219,11 +352,11 @@ export default function LoginScreen() {
                   </View>
                 ) : null}
 
-                <Button onPress={handlePasswordSubmit} disabled={isLoading} style={styles.button}>
+                <Button onPress={handlePasswordSubmit} disabled={isLoading} style={styles.button} testID="button-signin-submit">
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
               </>
-            ) : (
+            ) : step === "login_create_password" ? (
               <>
                 <ThemedText type="h3" style={styles.cardTitle}>
                   Create Password
@@ -233,12 +366,7 @@ export default function LoginScreen() {
                 </ThemedText>
 
                 <View style={styles.inputContainer}>
-                  <Feather
-                    name="lock"
-                    size={20}
-                    color="#6B7280"
-                    style={styles.inputIcon}
-                  />
+                  <Feather name="lock" size={20} color="#6B7280" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Create password"
@@ -247,26 +375,15 @@ export default function LoginScreen() {
                     onChangeText={setPasswordValue}
                     secureTextEntry={!showPassword}
                     editable={!isLoading}
+                    testID="input-new-password"
                   />
-                  <Pressable
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeButton}
-                  >
-                    <Feather
-                      name={showPassword ? "eye-off" : "eye"}
-                      size={20}
-                      color="#6B7280"
-                    />
+                  <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+                    <Feather name={showPassword ? "eye-off" : "eye"} size={20} color="#6B7280" />
                   </Pressable>
                 </View>
 
                 <View style={styles.inputContainer}>
-                  <Feather
-                    name="lock"
-                    size={20}
-                    color="#6B7280"
-                    style={styles.inputIcon}
-                  />
+                  <Feather name="lock" size={20} color="#6B7280" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Confirm password"
@@ -275,6 +392,7 @@ export default function LoginScreen() {
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showPassword}
                     editable={!isLoading}
+                    testID="input-confirm-password"
                   />
                 </View>
 
@@ -285,11 +403,103 @@ export default function LoginScreen() {
                   </View>
                 ) : null}
 
-                <Button onPress={handleCreatePassword} disabled={isLoading} style={styles.button}>
+                <Button onPress={handleCreatePassword} disabled={isLoading} style={styles.button} testID="button-create-password">
                   {isLoading ? "Creating..." : "Create Account"}
                 </Button>
               </>
-            )}
+            ) : step === "signup_form" ? (
+              <>
+                <View style={[styles.roleBadge, { backgroundColor: selectedRole === "staff" ? `${AppColors.warning}15` : `${AppColors.primary}15` }]}>
+                  <Feather
+                    name={selectedRole === "staff" ? "shield" : "user"}
+                    size={16}
+                    color={selectedRole === "staff" ? AppColors.warning : AppColors.primary}
+                  />
+                  <ThemedText style={[styles.roleBadgeText, { color: selectedRole === "staff" ? AppColors.warning : AppColors.primary }]}>
+                    Signing up as {roleLabel}
+                  </ThemedText>
+                </View>
+
+                <ThemedText type="h3" style={styles.cardTitle}>
+                  Create Account
+                </ThemedText>
+                <ThemedText style={styles.cardSubtitle}>
+                  Fill in your details to get started
+                </ThemedText>
+
+                <View style={styles.inputContainer}>
+                  <Feather name="user" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Full name"
+                    placeholderTextColor="#9CA3AF"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    editable={!isLoading}
+                    testID="input-name"
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Feather name="mail" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email address"
+                    placeholderTextColor="#9CA3AF"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    testID="input-signup-email"
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Feather name="lock" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#9CA3AF"
+                    value={password}
+                    onChangeText={setPasswordValue}
+                    secureTextEntry={!showPassword}
+                    editable={!isLoading}
+                    testID="input-signup-password"
+                  />
+                  <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+                    <Feather name={showPassword ? "eye-off" : "eye"} size={20} color="#6B7280" />
+                  </Pressable>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Feather name="lock" size={20} color="#6B7280" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm password"
+                    placeholderTextColor="#9CA3AF"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showPassword}
+                    editable={!isLoading}
+                    testID="input-signup-confirm-password"
+                  />
+                </View>
+
+                {error ? (
+                  <View style={styles.errorContainer}>
+                    <Feather name="alert-circle" size={16} color={AppColors.error} />
+                    <ThemedText style={styles.errorText}>{error}</ThemedText>
+                  </View>
+                ) : null}
+
+                <Button onPress={handleSignup} disabled={isLoading} style={styles.button} testID="button-signup-submit">
+                  {isLoading ? "Creating Account..." : "Sign Up"}
+                </Button>
+              </>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -345,6 +555,68 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     color: "#6B7280",
     marginBottom: Spacing.xl,
+  },
+  roleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  roleCardLast: {
+    marginBottom: 0,
+  },
+  roleIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.lg,
+  },
+  roleContent: {
+    flex: 1,
+  },
+  roleTitle: {
+    color: "#1F2937",
+    fontSize: 17,
+    marginBottom: 2,
+  },
+  roleDescription: {
+    color: "#6B7280",
+    fontSize: 13,
+  },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    marginBottom: Spacing.lg,
+    gap: 6,
+  },
+  roleBadgeText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  authModeButton: {
+    marginBottom: Spacing.md,
+  },
+  signupButton: {
+    alignItems: "center",
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: AppColors.primary,
+  },
+  signupButtonText: {
+    color: AppColors.primary,
+    fontWeight: "600",
+    fontSize: 16,
   },
   inputContainer: {
     flexDirection: "row",

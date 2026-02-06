@@ -13,6 +13,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<schema.User | undefined>;
   getUserById(id: string): Promise<schema.User | undefined>;
   getUserByQRCode(qrCodeValue: string): Promise<schema.User | undefined>;
+  createUser(email: string, name: string, role: string, passwordHash: string): Promise<schema.User>;
   updateUserPassword(id: string, passwordHash: string): Promise<void>;
   checkInUser(id: string): Promise<void>;
   getAllUsers(): Promise<schema.User[]>;
@@ -45,6 +46,19 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByQRCode(qrCodeValue: string): Promise<schema.User | undefined> {
     const [user] = await db.select().from(schema.users).where(eq(schema.users.qrCodeValue, qrCodeValue));
+    return user;
+  }
+
+  async createUser(email: string, name: string, role: string, passwordHash: string): Promise<schema.User> {
+    const crypto = await import("crypto");
+    const qrCodeValue = `SC2026-${crypto.randomUUID()}`;
+    const [user] = await db.insert(schema.users).values({
+      email: email.toLowerCase(),
+      name,
+      role,
+      qrCodeValue,
+      passwordHash,
+    }).returning();
     return user;
   }
 

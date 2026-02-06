@@ -89,6 +89,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/register", async (req: Request, res: Response) => {
+    try {
+      const { email, name, password, role } = req.body;
+
+      if (!email || !name || !password) {
+        return res.status(400).json({ message: "Email, name, and password are required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      const validRoles = ["attendee", "staff"];
+      const userRole = validRoles.includes(role) ? role : "attendee";
+
+      const existingUser = await storage.getUserByEmail(email.toLowerCase());
+      if (existingUser) {
+        return res.status(409).json({ message: "An account with this email already exists. Please sign in instead." });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = await storage.createUser(email.toLowerCase(), name, userRole, passwordHash);
+
+      const token = generateToken(user);
+      return res.json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          qrCodeValue: user.qrCodeValue,
+          checkedIn: user.checkedIn,
+        },
+      });
+    } catch (error) {
+      console.error("Register error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/auth/set-password", async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;

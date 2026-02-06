@@ -18,6 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password?: string) => Promise<{ success: boolean; needsPassword?: boolean; error?: string }>;
   setPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, name: string, password: string, role: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -141,6 +142,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const register = async (email: string, name: string, password: string, role: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const baseUrl = getApiUrl();
+      const response = await fetch(new URL("/api/auth/register", baseUrl).href, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, password, role }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        await setToken(data.token);
+        setUser(data.user);
+        return { success: true };
+      }
+
+      return { success: false, error: data.message || "Registration failed" };
+    } catch (error) {
+      return { success: false, error: "Network error. Please try again." };
+    }
+  };
+
   const logout = async () => {
     await removeToken();
     setUser(null);
@@ -164,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         login,
         setPassword,
+        register,
         logout,
         refreshUser,
       }}
