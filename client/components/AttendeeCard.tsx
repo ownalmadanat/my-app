@@ -13,6 +13,7 @@ interface AttendeeCardProps {
   role?: "attendee" | "staff";
   onPress?: () => void;
   onCheckIn?: () => void;
+  onCheckOut?: () => void;
 }
 
 export function AttendeeCard({
@@ -22,6 +23,7 @@ export function AttendeeCard({
   role = "attendee",
   onPress,
   onCheckIn,
+  onCheckOut,
 }: AttendeeCardProps) {
   const { theme } = useTheme();
 
@@ -30,9 +32,10 @@ export function AttendeeCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.container,
-        { backgroundColor: theme.cardBackground, opacity: pressed ? 0.95 : 1 },
+        { backgroundColor: theme.cardBackground, opacity: pressed && onPress ? 0.95 : 1 },
         Shadows.small,
       ]}
+      testID={`card-attendee-${name}`}
     >
       <View style={styles.content}>
         <View style={styles.header}>
@@ -51,11 +54,24 @@ export function AttendeeCard({
         <Pressable
           onPress={onCheckIn}
           style={({ pressed }) => [
-            styles.checkInButton,
+            styles.actionButton,
             { backgroundColor: AppColors.success, opacity: pressed ? 0.9 : 1 },
           ]}
+          testID={`button-checkin-${name}`}
         >
           <Feather name="check" size={20} color="#FFF" />
+        </Pressable>
+      ) : null}
+      {checkedIn && role !== "staff" && onCheckOut ? (
+        <Pressable
+          onPress={onCheckOut}
+          style={({ pressed }) => [
+            styles.actionButton,
+            { backgroundColor: AppColors.warning, opacity: pressed ? 0.9 : 1 },
+          ]}
+          testID={`button-checkout-${name}`}
+        >
+          <Feather name="x" size={20} color="#FFF" />
         </Pressable>
       ) : null}
     </Pressable>
@@ -90,7 +106,7 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 13,
   },
-  checkInButton: {
+  actionButton: {
     width: 48,
     height: "100%",
     justifyContent: "center",

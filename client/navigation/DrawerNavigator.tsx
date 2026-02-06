@@ -143,44 +143,69 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   };
 
   return (
-    <DrawerContentScrollView
-      {...props}
-      contentContainerStyle={[
-        styles.drawerContent,
-        { backgroundColor: theme.drawerBackground, paddingTop: insets.top + Spacing.lg },
-      ]}
-    >
-      <View style={styles.header}>
-        <Image
-          source={require("../../assets/images/icon.png")}
-          style={styles.logo}
-        />
-        <ThemedText type="h3" style={styles.appName}>
-          Stress Congress 2026
-        </ThemedText>
-      </View>
-
-      <View style={[styles.userCard, { backgroundColor: theme.backgroundSecondary }]}>
-        <Image
-          source={require("../../assets/images/default-avatar.png")}
-          style={styles.userAvatar}
-        />
-        <View style={styles.userInfo}>
-          <ThemedText type="h4" style={styles.userName} numberOfLines={1}>
-            {user?.name || "User"}
+    <View style={[styles.drawerWrapper, { backgroundColor: theme.drawerBackground }]}>
+      <DrawerContentScrollView
+        {...props}
+        contentContainerStyle={[
+          styles.drawerContent,
+          { paddingTop: insets.top + Spacing.lg },
+        ]}
+        style={{ backgroundColor: theme.drawerBackground }}
+      >
+        <View style={styles.header}>
+          <Image
+            source={require("../../assets/images/icon.png")}
+            style={styles.logo}
+          />
+          <ThemedText type="h3" style={styles.appName}>
+            Stress Congress 2026
           </ThemedText>
-          <View style={[styles.roleBadge, { backgroundColor: isStaff ? `${AppColors.warning}20` : `${AppColors.primary}15` }]}>
-            <ThemedText style={[styles.userRole, { color: isStaff ? AppColors.warning : theme.primary }]}>
-              {isStaff ? "Staff" : "Attendee"}
+        </View>
+
+        <View style={[styles.userCard, { backgroundColor: theme.backgroundSecondary }]}>
+          <Image
+            source={require("../../assets/images/default-avatar.png")}
+            style={styles.userAvatar}
+          />
+          <View style={styles.userInfo}>
+            <ThemedText type="h4" style={styles.userName} numberOfLines={1}>
+              {user?.name || "User"}
             </ThemedText>
+            <View style={[styles.roleBadge, { backgroundColor: isStaff ? `${AppColors.warning}20` : `${AppColors.primary}15` }]}>
+              <ThemedText style={[styles.userRole, { color: isStaff ? AppColors.warning : theme.primary }]}>
+                {isStaff ? "Staff" : "Attendee"}
+              </ThemedText>
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.menuSection}>
-        {isStaff ? (
-          <>
-            {staffMainItems.map((item) => (
+        <View style={styles.menuSection}>
+          {isStaff ? (
+            <>
+              {staffMainItems.map((item) => (
+                <DrawerItem
+                  key={item.name}
+                  icon={item.icon}
+                  label={item.label}
+                  isActive={currentRouteName === item.name}
+                  onPress={() => navigation.navigate(item.name)}
+                  theme={theme}
+                />
+              ))}
+              <SectionDivider label="Browse" theme={theme} />
+              {staffBrowseItems.map((item) => (
+                <DrawerItem
+                  key={item.name}
+                  icon={item.icon}
+                  label={item.label}
+                  isActive={currentRouteName === item.name}
+                  onPress={() => navigation.navigate(item.name)}
+                  theme={theme}
+                />
+              ))}
+            </>
+          ) : (
+            attendeeMainItems.map((item) => (
               <DrawerItem
                 key={item.name}
                 icon={item.icon}
@@ -189,21 +214,11 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
                 onPress={() => navigation.navigate(item.name)}
                 theme={theme}
               />
-            ))}
-            <SectionDivider label="Browse" theme={theme} />
-            {staffBrowseItems.map((item) => (
-              <DrawerItem
-                key={item.name}
-                icon={item.icon}
-                label={item.label}
-                isActive={currentRouteName === item.name}
-                onPress={() => navigation.navigate(item.name)}
-                theme={theme}
-              />
-            ))}
-          </>
-        ) : (
-          attendeeMainItems.map((item) => (
+            ))
+          )}
+
+          <SectionDivider label="Account" theme={theme} />
+          {accountItems.map((item) => (
             <DrawerItem
               key={item.name}
               icon={item.icon}
@@ -212,29 +227,18 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
               onPress={() => navigation.navigate(item.name)}
               theme={theme}
             />
-          ))
-        )}
+          ))}
+        </View>
+      </DrawerContentScrollView>
 
-        <SectionDivider label="Account" theme={theme} />
-        {accountItems.map((item) => (
-          <DrawerItem
-            key={item.name}
-            icon={item.icon}
-            label={item.label}
-            isActive={currentRouteName === item.name}
-            onPress={() => navigation.navigate(item.name)}
-            theme={theme}
-          />
-        ))}
-      </View>
-
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.lg }]}>
         <Pressable
           onPress={handleLogout}
           style={({ pressed }) => [
             styles.logoutButton,
             { backgroundColor: `${AppColors.error}10`, opacity: pressed ? 0.8 : 1 },
           ]}
+          testID="button-logout"
         >
           <Feather name="log-out" size={22} color={AppColors.error} />
           <ThemedText style={[styles.logoutText, { color: AppColors.error }]}>
@@ -242,7 +246,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
           </ThemedText>
         </Pressable>
       </View>
-    </DrawerContentScrollView>
+    </View>
   );
 }
 
@@ -379,8 +383,10 @@ export default function DrawerNavigator() {
 }
 
 const styles = StyleSheet.create({
-  drawerContent: {
+  drawerWrapper: {
     flex: 1,
+  },
+  drawerContent: {
     paddingHorizontal: Spacing.lg,
   },
   header: {
@@ -474,8 +480,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   footer: {
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.05)",
   },
   logoutButton: {
     flexDirection: "row",

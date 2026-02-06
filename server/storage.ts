@@ -16,6 +16,7 @@ export interface IStorage {
   createUser(email: string, name: string, role: string, passwordHash: string): Promise<schema.User>;
   updateUserPassword(id: string, passwordHash: string): Promise<void>;
   checkInUser(id: string): Promise<void>;
+  checkOutUser(id: string): Promise<void>;
   getAllUsers(): Promise<schema.User[]>;
   getStats(): Promise<{ totalRegistered: number; checkedIn: number; pending: number; attendeeCount: number; staffCount: number }>;
   getRecentCheckIns(limit?: number): Promise<Array<{ id: string; name: string; email: string; checkedInAt: string }>>;
@@ -70,6 +71,10 @@ export class DatabaseStorage implements IStorage {
     await db.update(schema.users).set({ checkedIn: true, checkedInAt: new Date() }).where(eq(schema.users.id, id));
   }
 
+  async checkOutUser(id: string): Promise<void> {
+    await db.update(schema.users).set({ checkedIn: false, checkedInAt: null }).where(eq(schema.users.id, id));
+  }
+
   async getAllUsers(): Promise<schema.User[]> {
     return db.select().from(schema.users).orderBy(schema.users.name);
   }
@@ -100,7 +105,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getSessions(): Promise<Array<schema.Session & { speakerName?: string }>> {
+  async getSessions(): Promise<Array<schema.Session & { speakerName?: string | null }>> {
     const sessions = await db
       .select({
         id: schema.sessions.id,

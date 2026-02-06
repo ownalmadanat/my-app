@@ -19,6 +19,14 @@ interface Stats {
   pending: number;
 }
 
+interface Attendee {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  checkedIn: boolean;
+}
+
 interface RecentCheckIn {
   id: string;
   name: string;
@@ -42,9 +50,17 @@ export default function StaffDashboardScreen() {
     refetchInterval: 5000,
   });
 
+  const { data: attendees = [], refetch: refetchAttendees } = useQuery<Attendee[]>({
+    queryKey: ["/api/attendees"],
+    refetchInterval: 10000,
+  });
+
+  const pendingAttendees = attendees.filter(a => !a.checkedIn && a.role !== "staff");
+
   const handleRefresh = () => {
     refetchStats();
     refetchCheckIns();
+    refetchAttendees();
   };
 
   const formatTime = (dateStr: string) => {
@@ -140,6 +156,10 @@ export default function StaffDashboardScreen() {
             value={stats?.pending || 0}
             icon="clock"
             iconColor={AppColors.warning}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.navigate("AttendeeSearch" as never);
+            }}
           />
         </View>
       )}
@@ -166,7 +186,59 @@ export default function StaffDashboardScreen() {
         </View>
       ) : null}
 
-      <ThemedText type="h3" style={styles.sectionTitle}>
+      <View style={styles.sectionRow}>
+        <ThemedText type="h3" style={styles.sectionTitle}>
+          Pending Attendees
+        </ThemedText>
+        {pendingAttendees.length > 5 ? (
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.navigate("AttendeeSearch" as never);
+            }}
+          >
+            <ThemedText style={[styles.viewAllText, { color: theme.primary }]}>View All</ThemedText>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {pendingAttendees.length > 0 ? (
+        pendingAttendees.slice(0, 5).map((attendee) => (
+          <Pressable
+            key={attendee.id}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.navigate("AttendeeSearch" as never);
+            }}
+            style={({ pressed }) => [
+              styles.pendingCard,
+              { backgroundColor: theme.cardBackground, opacity: pressed ? 0.9 : 1 },
+              Shadows.small,
+            ]}
+            testID={`pending-${attendee.id}`}
+          >
+            <View style={[styles.pendingIndicator, { backgroundColor: AppColors.warning }]} />
+            <View style={styles.pendingInfo}>
+              <ThemedText type="h4" style={styles.pendingName} numberOfLines={1}>
+                {attendee.name}
+              </ThemedText>
+              <ThemedText style={[styles.pendingEmail, { color: theme.textSecondary }]} numberOfLines={1}>
+                {attendee.email}
+              </ThemedText>
+            </View>
+            <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+          </Pressable>
+        ))
+      ) : (
+        <View style={[styles.emptyState, { backgroundColor: theme.cardBackground }]}>
+          <Feather name="check-circle" size={32} color={AppColors.success} />
+          <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
+            All attendees checked in
+          </ThemedText>
+        </View>
+      )}
+
+      <ThemedText type="h3" style={[styles.sectionTitle, { marginTop: Spacing.lg }]}>
         Recent Check-ins
       </ThemedText>
 
@@ -210,6 +282,16 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: Spacing.lg,
+  },
+  sectionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.lg,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   checkInActions: {
     flexDirection: "row",
@@ -299,6 +381,30 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: 4,
+  },
+  pendingCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    overflow: "hidden",
+  },
+  pendingIndicator: {
+    width: 4,
+    height: 40,
+    borderRadius: 2,
+    marginRight: Spacing.lg,
+  },
+  pendingInfo: {
+    flex: 1,
+  },
+  pendingName: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  pendingEmail: {
+    fontSize: 13,
   },
   checkInCard: {
     flexDirection: "row",

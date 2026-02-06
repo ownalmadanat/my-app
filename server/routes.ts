@@ -300,6 +300,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/check-out", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ success: false, message: "User ID is required" });
+      }
+
+      const user = await storage.getUserById(userId);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "Attendee not found" });
+      }
+
+      if (!user.checkedIn) {
+        return res.status(400).json({ success: false, message: "Attendee is not checked in" });
+      }
+
+      await storage.checkOutUser(user.id);
+
+      return res.json({
+        success: true,
+        user: { name: user.name, email: user.email },
+        message: "Check-out successful",
+      });
+    } catch (error) {
+      console.error("Check-out error:", error);
+      return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
   app.get("/api/stats", authMiddleware, async (req: Request, res: Response) => {
     try {
       const stats = await storage.getStats();
@@ -400,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/saved-sessions/:sessionId", authMiddleware, async (req: Request, res: Response) => {
     try {
       const userId = (req as any).userId;
-      const { sessionId } = req.params;
+      const sessionId = req.params.sessionId as string;
 
       await storage.unsaveSession(userId, sessionId);
       return res.json({ success: true });
@@ -422,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/companies/:id", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const company = await storage.getCompanyById(id);
       
       if (!company) {
